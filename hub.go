@@ -9,13 +9,13 @@ import (
 
 type Hub struct {
 	clients   map[*websocket.Conn]bool
-	broadcast chan Message
+	broadcast chan ServerGameData
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		clients:   make(map[*websocket.Conn]bool),
-		broadcast: make(chan Message),
+		broadcast: make(chan ServerGameData),
 	}
 }
 

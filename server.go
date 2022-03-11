@@ -15,25 +15,32 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type Message struct {
-	Message string `json:"message"`
+type PlayersGameData struct {
+	Key string `json:"key"`
 }
 
-func main() {
-	e := echo.New()
+type Coord struct {
+	X string `json:"x"`
+	Y string `json:"y"`
+}
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+type ServerGameData struct {
+	Ball    Coord `json:"ball"`
+	Player1 Coord `json:"player1"`
+	Player2 Coord `json:"player2"`
+}
 
+// Create a echo
+var e = echo.New()
+
+// Create a hub
+var hub = NewHub()
+
+func setRoots() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
 
-	// Create a hub
-	hub := NewHub()
-
-	// Start a go routine
-	go hub.run()
 	e.GET("/ws", func(c echo.Context) error {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
@@ -56,20 +63,32 @@ func main() {
 		read(hub, ws)
 		return nil
 	})
+}
+
+func main() {
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	// Start a go routine
+	go hub.run()
+	setRoots()
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
 func read(hub *Hub, client *websocket.Conn) {
 	for {
-		var message Message
-		err := client.ReadJSON(&message)
+		var message ServerGameData
+		var playersGameDataMessages PlayersGameData
+		err := client.ReadJSON(&playersGameDataMessages)
 		if !errors.Is(err, nil) {
 			log.Printf("error occurred: %v", err)
 			delete(hub.clients, client)
 			break
 		}
-		log.Println(message)
+		log.Println(playersGameDataMessages)
+
+		message.Ball.X = "10"
+		message.Ball.Y = "20"
 
 		// Send a message to hub
 		hub.broadcast <- message
