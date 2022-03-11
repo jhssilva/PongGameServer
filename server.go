@@ -20,8 +20,9 @@ type PlayersGameData struct {
 }
 
 type Coord struct {
-	X string `json:"x"`
-	Y string `json:"y"`
+	X     float32 `json:"x"`
+	Y     float32 `json:"y"`
+	Speed float32 `json:"speed"`
 }
 
 type ServerGameData struct {
@@ -36,9 +37,27 @@ var e = echo.New()
 // Create a hub
 var hub = NewHub()
 
+func setConfigurationEcho() {
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:3000"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+	}))
+	setRoots()
+}
+
 func setRoots() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
+	})
+
+	e.GET("/join", func(c echo.Context) error {
+		if len(hub.clients)+1 > 2 {
+
+			return c.String(http.StatusForbidden, "There is already 2 players!")
+		} else if len(hub.clients) == 2 {
+			go startGame()
+		}
+		return c.String(http.StatusOK, "Player Joined the game!")
 	})
 
 	e.GET("/ws", func(c echo.Context) error {
@@ -48,6 +67,12 @@ func setRoots() {
 		if !errors.Is(err, nil) {
 			log.Println(err)
 		}
+
+		if len(hub.clients) > 1 {
+			log.Println("Queue full! 2 Players Max!")
+			return nil
+		}
+
 		defer func() {
 			delete(hub.clients, ws)
 			ws.Close()
@@ -65,19 +90,13 @@ func setRoots() {
 	})
 }
 
-func main() {
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	// Start a go routine
-	go hub.run()
-	setRoots()
+func handlePlayerMovement(keyPressed PlayersGameData) {
+	//var message ServerGameData
 
-	e.Logger.Fatal(e.Start(":8080"))
 }
 
 func read(hub *Hub, client *websocket.Conn) {
 	for {
-		var message ServerGameData
 		var playersGameDataMessages PlayersGameData
 		err := client.ReadJSON(&playersGameDataMessages)
 		if !errors.Is(err, nil) {
@@ -87,10 +106,30 @@ func read(hub *Hub, client *websocket.Conn) {
 		}
 		log.Println(playersGameDataMessages)
 
-		message.Ball.X = "10"
-		message.Ball.Y = "20"
+		handlePlayerMovement(playersGameDataMessages)
 
-		// Send a message to hub
-		hub.broadcast <- message
+		// message.Ball.X = 10.2
+		// message.Ball.Y = 20.3
+		// message.Player1.X = 0
+		// message.Player1.X = 0
+
+		// // Send a message to hub
+		// hub.broadcast <- message
 	}
+}
+
+func startGame() {
+	var message ServerGameData
+	// Send a message to hub
+	hub.broadcast <- message
+}
+
+func main() {
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	// Start a go routine
+	go hub.run()
+	setConfigurationEcho()
+
+	e.Logger.Fatal(e.Start(":8080"))
 }
