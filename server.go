@@ -48,7 +48,6 @@ type Ball struct {
 }
 
 type Board struct {
-	Pos  Coord      `json:"pos"`
 	Size Dimensions `json:"size"`
 	Bar  Dimensions `json:"bar"`
 }
@@ -115,6 +114,7 @@ func setRoots() {
 
 		defer func() {
 			delete(hub.clients, ws)
+			gameData.GameStatus = false
 			ws.Close()
 			log.Printf("Closed!")
 		}()
@@ -146,7 +146,6 @@ func handlePlayerMovement(playerData PlayersGameData) {
 		log.Println("The key sent can't be handled by the server side. Accepted Keys are -> 'w', 's', 'ArrowDown', 'ArrowUp' ")
 		return
 	}
-
 }
 
 func read(hub *Hub, client *websocket.Conn) {
@@ -158,8 +157,7 @@ func read(hub *Hub, client *websocket.Conn) {
 			delete(hub.clients, client)
 			break
 		}
-		log.Println(playersGameDataMessages)
-
+		//log.Println(playersGameDataMessages)
 		handlePlayerMovement(playersGameDataMessages)
 	}
 }
@@ -178,8 +176,7 @@ func gameInteraction() {
 	if gameData.Ball.Pos.X > gameData.Board.Size.Width || gameData.Ball.Pos.X < 0 {
 		gameData.Ball.Speed.X *= -1
 	} else if gameData.Ball.Pos.Y < 0 || gameData.Ball.Pos.Y > gameData.Board.Size.Height {
-		gameData.GameStatus = false
-		//gameData.Ball.Speed.Y *= -1
+		gameData.Ball.Speed.Y *= -1
 	}
 
 }
@@ -189,13 +186,17 @@ func gameStatus() (status bool) {
 }
 
 func gameLoop() {
-	tick := time.Tick(16 * time.Millisecond)
+	tick := time.Tick(time.Second / 60)
 
 	for gameStatus() {
 		select {
 		case <-tick:
 			gameInteraction()
 			sendGameDataMessage()
+
+			if !gameStatus() {
+				break
+			}
 		}
 	}
 }
@@ -206,31 +207,33 @@ func sendGameDataMessage() {
 }
 
 func resetPositions() {
+	gameData.GameStatus = false
 	gameData.Board.Size.Width = 650
 	gameData.Board.Size.Height = 480
-	gameData.Board.Bar.Height = 10
-	gameData.Board.Bar.Width = 70
+	gameData.Board.Bar.Width = 20
+	gameData.Board.Bar.Height = 100
 
 	gameData.Ball.Pos.X = gameData.Board.Size.Width / 2
 	gameData.Ball.Pos.Y = gameData.Board.Size.Height / 2
-	gameData.Ball.Speed.X = 1
-	gameData.Ball.Speed.Y = 1
-	gameData.Ball.Size.Radius = 9
+	gameData.Ball.Speed.X = 5
+	gameData.Ball.Speed.Y = 5
+	gameData.Ball.Size.Radius = 10
 
 	gameData.Player1.Bar.Size.Width = gameData.Board.Bar.Width
 	gameData.Player1.Bar.Size.Height = gameData.Board.Bar.Height
 
-	gameData.Player1.Bar.Pos.X = 20 + (gameData.Player1.Bar.Size.Height / 2)
-	gameData.Player1.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player1.Bar.Size.Width / 2)
-	gameData.Player1.Bar.Speed.Y = 1
+	gameData.Player1.Bar.Pos.X = (gameData.Player1.Bar.Size.Width / 2)
+	gameData.Player1.Bar.Pos.Y = (gameData.Board.Size.Width / 2) - (gameData.Player1.Bar.Size.Width / 2)
+	gameData.Player1.Bar.Speed.Y = 40
 	gameData.Player1.Bar.Speed.X = 0
 
 	gameData.Player2.Bar.Size.Width = gameData.Board.Bar.Width
 	gameData.Player2.Bar.Size.Height = gameData.Board.Bar.Height
-	gameData.Player2.Bar.Pos.X = (-20 - (gameData.Player2.Bar.Size.Height / 2))
-	gameData.Player2.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Width / 2)
-	gameData.Player2.Bar.Speed.Y = 1
+	gameData.Player2.Bar.Pos.X = gameData.Board.Size.Width - gameData.Player2.Bar.Size.Width - 10
+	gameData.Player2.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Height / 2)
+	gameData.Player2.Bar.Speed.Y = 40
 	gameData.Player2.Bar.Speed.X = 0
+
 }
 
 func startGame() {
