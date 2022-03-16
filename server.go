@@ -91,7 +91,7 @@ func setRoots() {
 		var nrClients = len(hub.clients)
 		log.Println(nrClients)
 		if (nrClients) > 2 {
-			return c.String(http.StatusForbidden, "There is already 2 players!")
+			return c.String(http.StatusForbidden, "You can't join the game. There is already 2 players!")
 		} else if nrClients == 2 {
 			//go startGame()
 		}
@@ -100,7 +100,7 @@ func setRoots() {
 		go startGame()
 		// Test Code
 
-		return c.String(http.StatusOK, "Player Joined the game!")
+		return c.String(http.StatusOK, "Join the Game Successfuly!")
 
 	})
 
@@ -130,22 +130,39 @@ func setRoots() {
 	})
 }
 
-func handlePlayerMovement(playerData PlayersGameData) {
+func handlePlayerKeyPress(playerData PlayersGameData) {
 	//var message ServerGameData
 	var key = playerData.Key
 	switch key {
 	case "w":
-		gameData.Player1.Bar.Pos.Y -= gameData.Player1.Bar.Speed.Y
+		if gameData.Player1.Bar.Pos.Y > 0 {
+			gameData.Player1.Bar.Pos.Y -= gameData.Player1.Bar.Speed.Y
+		} else {
+			return
+		}
 	case "s":
-		gameData.Player1.Bar.Pos.Y += gameData.Player1.Bar.Speed.Y
+		if gameData.Player1.Bar.Pos.Y+gameData.Player1.Bar.Size.Height < gameData.Board.Size.Height {
+			gameData.Player1.Bar.Pos.Y += gameData.Player1.Bar.Speed.Y
+		} else {
+			return
+		}
 	case "ArrowUp":
-		gameData.Player2.Bar.Pos.Y -= gameData.Player2.Bar.Speed.Y
+		if gameData.Player2.Bar.Pos.Y > 0 {
+			gameData.Player2.Bar.Pos.Y -= gameData.Player2.Bar.Speed.Y
+		} else {
+			return
+		}
 	case "ArrowDown":
-		gameData.Player2.Bar.Pos.Y += gameData.Player2.Bar.Speed.Y
+		if gameData.Player2.Bar.Pos.Y+gameData.Player2.Bar.Size.Height < gameData.Board.Size.Height {
+			gameData.Player2.Bar.Pos.Y += gameData.Player2.Bar.Speed.Y
+		} else {
+			return
+		}
 	default:
 		log.Println("The key sent can't be handled by the server side. Accepted Keys are -> 'w', 's', 'ArrowDown', 'ArrowUp' ")
 		return
 	}
+	//sendGameDataMessage()
 }
 
 func read(hub *Hub, client *websocket.Conn) {
@@ -157,8 +174,8 @@ func read(hub *Hub, client *websocket.Conn) {
 			delete(hub.clients, client)
 			break
 		}
-		//log.Println(playersGameDataMessages)
-		handlePlayerMovement(playersGameDataMessages)
+
+		handlePlayerKeyPress(playersGameDataMessages)
 	}
 }
 
@@ -193,7 +210,6 @@ func gameLoop() {
 		case <-tick:
 			gameInteraction()
 			sendGameDataMessage()
-
 			if !gameStatus() {
 				break
 			}
@@ -208,8 +224,8 @@ func sendGameDataMessage() {
 
 func resetPositions() {
 	gameData.GameStatus = false
-	gameData.Board.Size.Width = 650
-	gameData.Board.Size.Height = 480
+	gameData.Board.Size.Width = 800
+	gameData.Board.Size.Height = 600
 	gameData.Board.Bar.Width = 20
 	gameData.Board.Bar.Height = 100
 
@@ -223,15 +239,15 @@ func resetPositions() {
 	gameData.Player1.Bar.Size.Height = gameData.Board.Bar.Height
 
 	gameData.Player1.Bar.Pos.X = (gameData.Player1.Bar.Size.Width / 2)
-	gameData.Player1.Bar.Pos.Y = (gameData.Board.Size.Width / 2) - (gameData.Player1.Bar.Size.Width / 2)
-	gameData.Player1.Bar.Speed.Y = 40
+	gameData.Player1.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player1.Bar.Size.Height / 2)
+	gameData.Player1.Bar.Speed.Y = 10.0
 	gameData.Player1.Bar.Speed.X = 0
 
 	gameData.Player2.Bar.Size.Width = gameData.Board.Bar.Width
 	gameData.Player2.Bar.Size.Height = gameData.Board.Bar.Height
 	gameData.Player2.Bar.Pos.X = gameData.Board.Size.Width - gameData.Player2.Bar.Size.Width - 10
 	gameData.Player2.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Height / 2)
-	gameData.Player2.Bar.Speed.Y = 40
+	gameData.Player2.Bar.Speed.Y = 10.0
 	gameData.Player2.Bar.Speed.X = 0
 
 }
