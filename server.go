@@ -22,7 +22,6 @@ type PlayersGameData struct {
 type Dimensions struct {
 	Width  float32 `json:"width"`
 	Height float32 `json:"height"`
-	Radius float32 `json:"radius"`
 }
 
 type Coord struct {
@@ -186,16 +185,91 @@ func game() {
 	log.Println("Game Ended")
 }
 
-func gameInteraction() {
-	gameData.Ball.Pos.X += gameData.Ball.Speed.X
-	gameData.Ball.Pos.Y += gameData.Ball.Speed.Y
+func increasePointsPlayer1() {
+	gameData.Player1.Score += 1
+}
 
-	if gameData.Ball.Pos.X > gameData.Board.Size.Width || gameData.Ball.Pos.X < 0 {
-		gameData.Ball.Speed.X *= -1
-	} else if gameData.Ball.Pos.Y < 0 || gameData.Ball.Pos.Y > gameData.Board.Size.Height {
+func increasePointsPlayer2() {
+	gameData.Player2.Score += 1
+}
+
+func resetBall() {
+	gameData.Ball.Pos.X = gameData.Board.Size.Width / 2
+	gameData.Ball.Pos.Y = gameData.Board.Size.Height / 2
+	gameData.Ball.Speed.X = 5
+	gameData.Ball.Speed.Y = 5
+}
+
+func isBallCollidedPlayers(player *int) bool {
+	var ball = gameData.Ball
+	var player1 = gameData.Player1
+	var player2 = gameData.Player2
+
+	// Check colision with Player 1
+	if ball.Pos.X <= (player1.Bar.Pos.X+player1.Bar.Size.Width) && ball.Pos.X >= (player1.Bar.Pos.X) {
+		if ball.Pos.Y <= player1.Bar.Pos.Y+player1.Bar.Size.Height && ball.Pos.Y+ball.Size.Height >= player1.Bar.Pos.Y {
+			*player = 1
+			return true
+		}
+	}
+
+	// Check colision with Player 2
+	if ball.Pos.X+ball.Size.Width >= player2.Bar.Pos.X && ball.Pos.X <= player2.Bar.Pos.X+player2.Bar.Size.Width {
+		if ball.Pos.Y <= player2.Bar.Pos.Y+player1.Bar.Size.Height && ball.Pos.Y+ball.Size.Height >= player2.Bar.Pos.Y {
+			*player = 2
+			return true
+		}
+	}
+
+	return false
+}
+
+func ballInteraction() {
+	var pos_x = &gameData.Ball.Pos.X
+	var pos_y = &gameData.Ball.Pos.Y
+	var ball_size_x = gameData.Ball.Size.Width
+	var ball_size_y = gameData.Ball.Size.Height
+	var max_x = gameData.Board.Size.Width
+	var max_y = gameData.Board.Size.Height
+	var player_nr = 0
+
+	//Detect colision in the Y limits
+	if (*pos_y) < 0 || (*pos_y)+ball_size_y > max_y {
 		gameData.Ball.Speed.Y *= -1
 	}
 
+	// Detect colision with the Players Bar
+	if isBallCollidedPlayers(&player_nr) {
+		if player_nr == 1 {
+			if gameData.Ball.Speed.X < 0 {
+				gameData.Ball.Speed.X *= -1
+			}
+		} else if player_nr == 2 {
+			if gameData.Ball.Speed.X > 0 {
+				gameData.Ball.Speed.X *= -1
+			}
+		}
+
+	}
+
+	// Ball Movement
+	(*pos_x) += gameData.Ball.Speed.X
+	(*pos_y) += gameData.Ball.Speed.Y
+
+	// Detect colision with X Limits
+	if (*pos_x) < 0 {
+		increasePointsPlayer2()
+		resetBall()
+		return
+	} else if (*pos_x)+ball_size_x > max_x {
+		increasePointsPlayer1()
+		resetBall()
+		return
+	}
+}
+
+func gameInteraction() {
+	ballInteraction()
 }
 
 func gameStatus() (status bool) {
@@ -223,32 +297,39 @@ func sendGameDataMessage() {
 }
 
 func resetPositions() {
+	// Board
 	gameData.GameStatus = false
-	gameData.Board.Size.Width = 800
-	gameData.Board.Size.Height = 600
-	gameData.Board.Bar.Width = 20
+	gameData.Board.Size.Width = 650
+	gameData.Board.Size.Height = 480
+	gameData.Board.Bar.Width = 10
 	gameData.Board.Bar.Height = 100
 
+	// Ball
 	gameData.Ball.Pos.X = gameData.Board.Size.Width / 2
 	gameData.Ball.Pos.Y = gameData.Board.Size.Height / 2
 	gameData.Ball.Speed.X = 5
 	gameData.Ball.Speed.Y = 5
-	gameData.Ball.Size.Radius = 10
+	gameData.Ball.Size.Height = 15
+	gameData.Ball.Size.Width = 15
 
+	// Players
+	// Player 1
 	gameData.Player1.Bar.Size.Width = gameData.Board.Bar.Width
 	gameData.Player1.Bar.Size.Height = gameData.Board.Bar.Height
-
 	gameData.Player1.Bar.Pos.X = (gameData.Player1.Bar.Size.Width / 2)
 	gameData.Player1.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player1.Bar.Size.Height / 2)
 	gameData.Player1.Bar.Speed.Y = 10.0
 	gameData.Player1.Bar.Speed.X = 0
+	gameData.Player1.Score = 0
 
+	// Player 2
 	gameData.Player2.Bar.Size.Width = gameData.Board.Bar.Width
 	gameData.Player2.Bar.Size.Height = gameData.Board.Bar.Height
-	gameData.Player2.Bar.Pos.X = gameData.Board.Size.Width - gameData.Player2.Bar.Size.Width - 10
+	gameData.Player2.Bar.Pos.X = gameData.Board.Size.Width - (1.5 * gameData.Player2.Bar.Size.Width)
 	gameData.Player2.Bar.Pos.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Height / 2)
 	gameData.Player2.Bar.Speed.Y = 10.0
 	gameData.Player2.Bar.Speed.X = 0
+	gameData.Player1.Score = 2
 
 }
 
