@@ -29,13 +29,6 @@ type Coord struct {
 	Y float32 `json:"y"`
 }
 
-type Object struct {
-	Size     Dimensions `json:"size"`
-	Position Coord      `json:"pos"`
-	Speed    Coord
-	Mass     float32
-}
-
 type Particle struct {
 	Position Vector2    `json:"pos"`
 	Size     Dimensions `json:"size"`
@@ -50,8 +43,9 @@ type Board struct {
 }
 
 type Player struct {
-	Bar   Object `json:"bar"`
-	Score int    `json:"score"`
+	Bar     Particle `json:"bar"`
+	Score   int      `json:"score"`
+	LastKey string   `json:"lastKey"`
 }
 
 type ServerGameData struct {
@@ -133,34 +127,49 @@ func setRoots() {
 	})
 }
 
+func handlerWhenKey_W_isPressed() {
+	if gameData.Player1.Bar.Position.Y > 0 {
+		gameData.Player1.Bar.Position.Y -= gameData.Player1.Bar.Velocity.Y
+	} else {
+		return
+	}
+}
+
+func handlerWhenKey_S_isPressed() {
+	if gameData.Player1.Bar.Position.Y+gameData.Player1.Bar.Size.Height < gameData.Board.Size.Height {
+		gameData.Player1.Bar.Position.Y += gameData.Player1.Bar.Velocity.Y
+	} else {
+		return
+	}
+}
+
+func handlerWhenKey_ArrowUp_isPressed() {
+	if gameData.Player2.Bar.Position.Y > 0 {
+		gameData.Player2.Bar.Position.Y -= gameData.Player2.Bar.Velocity.Y
+	} else {
+		return
+	}
+}
+
+func handlerWhenKey_ArrowDown_isPressed() {
+	if gameData.Player2.Bar.Position.Y+gameData.Player2.Bar.Size.Height < gameData.Board.Size.Height {
+		gameData.Player2.Bar.Position.Y += gameData.Player2.Bar.Velocity.Y
+	} else {
+		return
+	}
+}
+
 func handlerPlayerKeyPress(playerData PlayersGameData) {
-	//var message ServerGameData
 	var key = playerData.Key
 	switch key {
 	case "w":
-		if gameData.Player1.Bar.Position.Y > 0 {
-			gameData.Player1.Bar.Position.Y -= gameData.Player1.Bar.Speed.Y
-		} else {
-			return
-		}
+		handlerWhenKey_W_isPressed()
 	case "s":
-		if gameData.Player1.Bar.Position.Y+gameData.Player1.Bar.Size.Height < gameData.Board.Size.Height {
-			gameData.Player1.Bar.Position.Y += gameData.Player1.Bar.Speed.Y
-		} else {
-			return
-		}
+		handlerWhenKey_S_isPressed()
 	case "ArrowUp":
-		if gameData.Player2.Bar.Position.Y > 0 {
-			gameData.Player2.Bar.Position.Y -= gameData.Player2.Bar.Speed.Y
-		} else {
-			return
-		}
+		handlerWhenKey_ArrowUp_isPressed()
 	case "ArrowDown":
-		if gameData.Player2.Bar.Position.Y+gameData.Player2.Bar.Size.Height < gameData.Board.Size.Height {
-			gameData.Player2.Bar.Position.Y += gameData.Player2.Bar.Speed.Y
-		} else {
-			return
-		}
+		handlerWhenKey_ArrowDown_isPressed()
 	default:
 		log.Println("The key sent can't be handled by the server side. Accepted Keys are -> 'w', 's', 'ArrowDown', 'ArrowUp' ")
 		return
@@ -265,20 +274,7 @@ func handlerBallColisionWithPlayers() {
 }
 
 func ballMovement() {
-	//  Particle *particle = &particles[i];
-	//             Vector2 force = ComputeForce(particle);
-	//             Vector2 acceleration = (Vector2){force.x / particle->mass, force.y / particle->mass};
-	//             particle->velocity.x += acceleration.x * dt;
-	//             particle->velocity.y += acceleration.y * dt;
-	//             particle->position.x += particle->velocity.x * dt;
-	//             particle->position.y += particle->velocity.y * dt;
-
 	particle := &gameData.Ball
-	//force := ComputeForce(particle)
-	//acceleration := Vector2{X: force.X / (*particle).Mass, Y: force.Y / (*particle).Mass}
-
-	// ((*particle).Velocity.X) += acceleration.X * (*particle).Dt
-	// ((*particle).Velocity.Y) += acceleration.Y * (*particle).Dt
 	((*particle).Position.X) += (*particle).Velocity.X * (*particle).Dt
 	((*particle).Position.Y) += (*particle).Velocity.Y * (*particle).Dt
 
@@ -297,6 +293,25 @@ func ComputeForce(particle *Particle) Vector2 {
 	return Vector2{X: 0, Y: 1} //(*particle).Mass * 9.81}
 }
 
+func resetPositions() {
+	// Board
+	resetBoard()
+
+	// Ball
+	resetBall()
+
+	// Players
+	resetPlayers()
+}
+
+func resetBoard() {
+	gameData.GameStatus = false
+	gameData.Board.Size.Width = 650
+	gameData.Board.Size.Height = 480
+	gameData.Board.Bar.Width = 10
+	gameData.Board.Bar.Height = 100
+}
+
 func resetBall() {
 	gameData.Ball.Mass = 1 // 1 Kg
 	gameData.Ball.Position = Vector2{X: gameData.Board.Size.Width / 2, Y: gameData.Board.Size.Height / 2}
@@ -304,6 +319,26 @@ func resetBall() {
 	gameData.Ball.Dt = 0
 	gameData.Ball.Size.Height = 15
 	gameData.Ball.Size.Width = 15
+}
+
+func resetPlayers() {
+	// Player 1
+	gameData.Player1.Bar.Size.Width = gameData.Board.Bar.Width
+	gameData.Player1.Bar.Size.Height = gameData.Board.Bar.Height
+	gameData.Player1.Bar.Position.X = (gameData.Player1.Bar.Size.Width / 2)
+	gameData.Player1.Bar.Position.Y = (gameData.Board.Size.Height / 2) - (gameData.Player1.Bar.Size.Height / 2)
+	gameData.Player1.Bar.Velocity.Y = 30.0
+	gameData.Player1.Bar.Velocity.X = 0
+	gameData.Player1.Score = 0
+
+	// Player 2
+	gameData.Player2.Bar.Size.Width = gameData.Board.Bar.Width
+	gameData.Player2.Bar.Size.Height = gameData.Board.Bar.Height
+	gameData.Player2.Bar.Position.X = gameData.Board.Size.Width - (1.5 * gameData.Player2.Bar.Size.Width)
+	gameData.Player2.Bar.Position.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Height / 2)
+	gameData.Player2.Bar.Velocity.Y = 10.0
+	gameData.Player2.Bar.Velocity.X = 0
+	gameData.Player1.Score = 2
 }
 
 func gameInteraction() {
@@ -332,37 +367,6 @@ func gameLoop() {
 func sendGameDataMessage() {
 	// Send a message to hub
 	hub.broadcast <- gameData
-}
-
-func resetPositions() {
-	// Board
-	gameData.GameStatus = false
-	gameData.Board.Size.Width = 650
-	gameData.Board.Size.Height = 480
-	gameData.Board.Bar.Width = 10
-	gameData.Board.Bar.Height = 100
-
-	// Ball
-	resetBall()
-
-	// Players
-	// Player 1
-	gameData.Player1.Bar.Size.Width = gameData.Board.Bar.Width
-	gameData.Player1.Bar.Size.Height = gameData.Board.Bar.Height
-	gameData.Player1.Bar.Position.X = (gameData.Player1.Bar.Size.Width / 2)
-	gameData.Player1.Bar.Position.Y = (gameData.Board.Size.Height / 2) - (gameData.Player1.Bar.Size.Height / 2)
-	gameData.Player1.Bar.Speed.Y = 30.0
-	gameData.Player1.Bar.Speed.X = 0
-	gameData.Player1.Score = 0
-
-	// Player 2
-	gameData.Player2.Bar.Size.Width = gameData.Board.Bar.Width
-	gameData.Player2.Bar.Size.Height = gameData.Board.Bar.Height
-	gameData.Player2.Bar.Position.X = gameData.Board.Size.Width - (1.5 * gameData.Player2.Bar.Size.Width)
-	gameData.Player2.Bar.Position.Y = (gameData.Board.Size.Height / 2) - (gameData.Player2.Bar.Size.Height / 2)
-	gameData.Player2.Bar.Speed.Y = 10.0
-	gameData.Player2.Bar.Speed.X = 0
-	gameData.Player1.Score = 2
 }
 
 func startGame() {
