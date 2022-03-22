@@ -25,9 +25,11 @@ type Dimensions struct {
 }
 
 type Object struct {
-	Position Vector2    `json:"pos"`
-	Size     Dimensions `json:"size"`
-	Speed    Vector2
+	Position     Vector2    `json:"pos"`
+	Size         Dimensions `json:"size"`
+	Speed        Vector2
+	DefaultSpeed Vector2
+	MaxSpeed     Vector2
 }
 
 type Board struct {
@@ -132,7 +134,7 @@ func setLastKeyPressedInPlayer(player *Player, key string) {
 func handlerWhenKey_W_isPressed() {
 	if gameData.Player1.Bar.Position.Y > 0 {
 		player := &gameData.Player1
-		var keyDescription string = "arrowUp"
+		var keyDescription string = "w"
 		handlerLastKey(player, keyDescription)
 		(*player).Bar.Position.Y -= (*player).Bar.Speed.Y
 	} else {
@@ -258,11 +260,11 @@ func handlerBallColisionWithXAxis() {
 
 	if ((*ball).Position.X) < 0 {
 		increasePointsPlayer(&gameData.Player2)
-		resetBall()
+		resetBall(1)
 		return
 	} else if (*ball).Position.X+(*ball).Size.Width > (*board_limit).Width {
 		increasePointsPlayer(&gameData.Player1)
-		resetBall()
+		resetBall(2)
 		return
 	}
 }
@@ -280,44 +282,65 @@ func handlerBallColisionWithPlayers() {
 	// Detect colision with the Players Bar
 	var player_nr int = 0
 	if isBallCollidedPlayers(&player_nr) {
-		handlerHasTouchedPlayer()
-		if player_nr == 1 {
-			if gameData.Ball.Speed.X < 0 {
-				gameData.Ball.Speed.X *= -1
-			}
-		} else if player_nr == 2 {
-			if gameData.Ball.Speed.X > 0 {
-				gameData.Ball.Speed.X *= -1
-			}
-		}
-
+		handlerBallHasTouchedPlayer()
+		handlerBallSpeedColisionPlayers(player_nr)
 	}
 }
 
-func handlerHasTouchedPlayer() {
-
-	if gameData.Ball.HasTouchedPlayer {
+func setBallSpeedAfterColisionWithPlayer(player *Player) {
+	if player == nil {
 		return
 	}
 
-	speed := gameData.Ball.Speed
-	var maxSpeed float32 = 6
-	var maxMutiple float32 = 3
-	if speed.X < maxSpeed {
-		gameData.Ball.Speed.X *= maxMutiple
+	ball := &gameData.Ball
+	// Check if the Ball it's the Superior / Inferior / Middle Part of the Player Bar
+	if (*ball).Position.Y+(*ball).Size.Height < (*player).Bar.Position.Y+(*player).Bar.Size.Height/3 {
+		if (*ball).Speed.Y == 0 {
+			(*ball).Speed.Y = -(*ball).MaxSpeed.Y
+		} else if (*ball).Speed.Y > 0 {
+			(*ball).Speed.Y *= -1
+		}
+	} else if (*ball).Position.Y > (*player).Bar.Position.Y+2*(*player).Bar.Size.Height/3 {
+		if (*ball).Speed.Y == 0 {
+			(*ball).Speed.Y = (*ball).MaxSpeed.Y
+		} else if (*ball).Speed.Y < 0 {
+			(*ball).Speed.Y *= -1
+		}
+	} else {
+		(*ball).Speed.Y = 0
+	}
+}
+
+func handlerBallSpeedColisionPlayers(player_nr int) {
+	ball := &gameData.Ball
+	var player *Player
+
+	if player_nr == 1 {
+		player = &gameData.Player1
+	} else if player_nr == 2 {
+		player = &gameData.Player2
 	}
 
-	if speed.Y < maxSpeed {
-		gameData.Ball.Speed.Y *= maxMutiple
+	setBallSpeedAfterColisionWithPlayer(player)
+	(*ball).Speed.X *= -1
+}
+
+func handlerBallHasTouchedPlayer() {
+	ball := &gameData.Ball
+	if (*ball).HasTouchedPlayer {
+		return
 	}
 
-	gameData.Ball.HasTouchedPlayer = true
+	(*ball).Speed.X = (*ball).MaxSpeed.X
+	(*ball).Speed.Y = (*ball).MaxSpeed.Y
+
+	(*ball).HasTouchedPlayer = true
 }
 
 func ballMovement() {
-	particle := &gameData.Ball
-	((*particle).Position.X) += (*particle).Speed.X
-	((*particle).Position.Y) += (*particle).Speed.Y
+	ball := &gameData.Ball
+	((*ball).Position.X) += (*ball).Speed.X
+	((*ball).Position.Y) += (*ball).Speed.Y
 
 	handlerBallColisionWithXAxis()
 	handlerBallColisionWithYAxis()
@@ -329,7 +352,7 @@ func resetPositions() {
 	resetBoard()
 
 	// Ball
-	resetBall()
+	resetBall(0)
 
 	// Players
 	resetPlayers()
@@ -343,12 +366,20 @@ func resetBoard() {
 	gameData.Board.Bar.Height = 100
 }
 
-func resetBall() {
-	gameData.Ball.Position = Vector2{X: gameData.Board.Size.Width / 2, Y: gameData.Board.Size.Height / 2}
-	gameData.Ball.Speed = Vector2{X: 2, Y: 2}
-	gameData.Ball.Size.Height = 15
-	gameData.Ball.Size.Width = 15
-	gameData.Ball.HasTouchedPlayer = false
+func resetBall(num int) {
+	ball := &gameData.Ball
+	(*ball).Position = Vector2{X: gameData.Board.Size.Width / 2, Y: gameData.Board.Size.Height / 2}
+	(*ball).DefaultSpeed = Vector2{X: 2, Y: 2}
+	(*ball).MaxSpeed = Vector2{X: 6, Y: 6}
+	(*ball).Size.Height = 15
+	(*ball).Size.Width = 15
+	(*ball).HasTouchedPlayer = false
+	(*ball).Speed = (*ball).DefaultSpeed
+
+	// Ball goes to Player 1
+	if num == 1 {
+		(*ball).Speed.X *= -1
+	}
 }
 
 func resetPlayers() {
