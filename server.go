@@ -244,7 +244,7 @@ func isBallCollidedPlayers(player *int) bool {
 
 	// Check colision with Player 2
 	if ball.Position.X+ball.Size.Width >= player2.Bar.Position.X && ball.Position.X <= player2.Bar.Position.X+player2.Bar.Size.Width {
-		if ball.Position.Y <= player2.Bar.Position.Y+player1.Bar.Size.Height && ball.Position.Y+ball.Size.Height >= player2.Bar.Position.Y {
+		if ball.Position.Y <= player2.Bar.Position.Y+player2.Bar.Size.Height && ball.Position.Y+ball.Size.Height >= player2.Bar.Position.Y {
 			*player = 2
 			return true
 		}
@@ -282,7 +282,7 @@ func handlerBallColisionWithPlayers() {
 	// Detect colision with the Players Bar
 	var player_nr int = 0
 	if isBallCollidedPlayers(&player_nr) {
-		handlerBallHasTouchedPlayer()
+		handlerBallHasTouchedPlayer(player_nr)
 		handlerBallSpeedColisionPlayers(player_nr)
 	}
 }
@@ -294,13 +294,13 @@ func setBallSpeedAfterColisionWithPlayer(player *Player) {
 
 	ball := &gameData.Ball
 	// Check if the Ball it's the Superior / Inferior / Middle Part of the Player Bar
-	if (*ball).Position.Y+(*ball).Size.Height < (*player).Bar.Position.Y+(*player).Bar.Size.Height/3 {
+	if (*ball).Position.Y+(*ball).Size.Height/2 < (*player).Bar.Position.Y+((*player).Bar.Size.Height/3) {
 		if (*ball).Speed.Y == 0 {
 			(*ball).Speed.Y = -(*ball).MaxSpeed.Y
 		} else if (*ball).Speed.Y > 0 {
 			(*ball).Speed.Y *= -1
 		}
-	} else if (*ball).Position.Y > (*player).Bar.Position.Y+2*(*player).Bar.Size.Height/3 {
+	} else if (*ball).Position.Y+(*ball).Size.Height/2 > (*player).Bar.Position.Y+(2*((*player).Bar.Size.Height/3)) {
 		if (*ball).Speed.Y == 0 {
 			(*ball).Speed.Y = (*ball).MaxSpeed.Y
 		} else if (*ball).Speed.Y < 0 {
@@ -309,10 +309,11 @@ func setBallSpeedAfterColisionWithPlayer(player *Player) {
 	} else {
 		(*ball).Speed.Y = 0
 	}
+
+	(*ball).Speed.X *= -1
 }
 
 func handlerBallSpeedColisionPlayers(player_nr int) {
-	ball := &gameData.Ball
 	var player *Player
 
 	if player_nr == 1 {
@@ -322,17 +323,19 @@ func handlerBallSpeedColisionPlayers(player_nr int) {
 	}
 
 	setBallSpeedAfterColisionWithPlayer(player)
-	(*ball).Speed.X *= -1
 }
 
-func handlerBallHasTouchedPlayer() {
+func handlerBallHasTouchedPlayer(player_nr int) {
 	ball := &gameData.Ball
 	if (*ball).HasTouchedPlayer {
 		return
 	}
 
-	(*ball).Speed.X = (*ball).MaxSpeed.X
-	(*ball).Speed.Y = (*ball).MaxSpeed.Y
+	if player_nr == 1 {
+		(*ball).Speed.X = -(*ball).MaxSpeed.X
+	} else if player_nr == 2 {
+		(*ball).Speed.X = (*ball).MaxSpeed.X
+	}
 
 	(*ball).HasTouchedPlayer = true
 }
@@ -362,8 +365,8 @@ func resetBoard() {
 	gameData.GameStatus = false
 	gameData.Board.Size.Width = 640
 	gameData.Board.Size.Height = 480
-	gameData.Board.Bar.Width = 20
-	gameData.Board.Bar.Height = 100
+	gameData.Board.Bar.Width = 10
+	gameData.Board.Bar.Height = 120
 }
 
 func resetBall(num int) {
