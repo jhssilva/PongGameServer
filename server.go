@@ -227,6 +227,9 @@ func game() {
 
 func increasePointsPlayer(player *Player) {
 	(*player).Score += 1
+	if (*player).Score == 10 {
+		gameData.GameStatus = false
+	}
 }
 
 func isBallCollidedPlayers(player *int) bool {
