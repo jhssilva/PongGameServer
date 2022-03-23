@@ -50,6 +50,7 @@ type Ball struct {
 
 type ServerGameData struct {
 	GameStatus bool   `json:"gameStatus"`
+	PlayerWon  bool   `json:"hasPlayerWon"`
 	Board      Board  `json:"board"`
 	Ball       Ball   `json:"ball"`
 	Player1    Player `json:"player1"`
@@ -90,12 +91,8 @@ func setRoots() {
 		if (nrClients) > 2 {
 			return c.String(http.StatusForbidden, "You can't join the game. There is already 2 players!")
 		} else if nrClients == 2 {
-			//go startGame()
+			go startGame()
 		}
-
-		// Test Code
-		go startGame()
-		// Test Code
 
 		return c.String(http.StatusOK, "Join the Game Successfuly!")
 
@@ -190,7 +187,6 @@ func handlerPlayerKeyPress(playerData PlayersGameData) {
 		log.Println("The key sent can't be handled by the server side. Accepted Keys are -> 'w', 's', 'ArrowDown', 'ArrowUp' ")
 		return
 	}
-	sendGameDataMessage()
 }
 
 func handlerLastKey(player *Player, keyDescription string) {
@@ -229,6 +225,7 @@ func increasePointsPlayer(player *Player) {
 	(*player).Score += 1
 	if (*player).Score == 10 {
 		gameData.GameStatus = false
+		gameData.PlayerWon = true
 	}
 }
 
@@ -353,6 +350,12 @@ func ballMovement() {
 	handlerBallColisionWithPlayers()
 }
 
+func resetGameData() {
+	gameData.GameStatus = false
+	gameData.PlayerWon = false
+	resetPositions()
+}
+
 func resetPositions() {
 	// Board
 	resetBoard()
@@ -365,7 +368,6 @@ func resetPositions() {
 }
 
 func resetBoard() {
-	gameData.GameStatus = false
 	gameData.Board.Size.Width = 640
 	gameData.Board.Size.Height = 480
 	gameData.Board.Bar.Width = 10
@@ -439,7 +441,7 @@ func sendGameDataMessage() {
 }
 
 func startGame() {
-	resetPositions()
+	resetGameData()
 	go game()
 }
 
