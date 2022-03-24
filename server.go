@@ -17,7 +17,8 @@ var upgrader = websocket.Upgrader{
 }
 
 type PlayersGameData struct {
-	Key string `json:"key"`
+	Key  string `json:"key"`
+	Play bool   `json:"play"`
 }
 type Dimensions struct {
 	Width  float32 `json:"width"`
@@ -51,6 +52,7 @@ type Ball struct {
 type ServerGameData struct {
 	GameStatus bool   `json:"gameStatus"`
 	PlayerWon  bool   `json:"hasPlayerWon"`
+	PlayLobby  int    // Players in Lobby waiting for game to start, after click on Play Again
 	Board      Board  `json:"board"`
 	Ball       Ball   `json:"ball"`
 	Player1    Player `json:"player1"`
@@ -172,6 +174,18 @@ func handlerWhenKey_ArrowDown_isPressed() {
 	}
 }
 
+func handlerPlayerMessage(playerData PlayersGameData) {
+
+	if gameData.GameStatus {
+		handlerPlayerKeyPress(playerData)
+	} else {
+		if playerData.Play {
+			gameData.PlayLobby += 1
+			handlerPlayLobbyVariableStatus()
+		}
+	}
+}
+
 func handlerPlayerKeyPress(playerData PlayersGameData) {
 	var key = playerData.Key
 	switch key {
@@ -200,6 +214,12 @@ func handlerLastKey(player *Player, keyDescription string) {
 	}
 }
 
+func handlerPlayLobbyVariableStatus() {
+	if gameData.PlayLobby == 2 {
+		startGame()
+	}
+}
+
 func read(hub *Hub, client *websocket.Conn) {
 	for {
 		var playersGameDataMessages PlayersGameData
@@ -210,7 +230,7 @@ func read(hub *Hub, client *websocket.Conn) {
 			break
 		}
 
-		handlerPlayerKeyPress(playersGameDataMessages)
+		handlerPlayerMessage(playersGameDataMessages)
 	}
 }
 
@@ -353,6 +373,7 @@ func ballMovement() {
 func resetGameData() {
 	gameData.GameStatus = false
 	gameData.PlayerWon = false
+	gameData.PlayLobby = 0
 	resetPositions()
 }
 
