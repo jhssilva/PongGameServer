@@ -1,2 +1,5 @@
 # PongGameServer
- PongGameServer in Golang
+
+PongGameServer in Golang
+
+To run: go run server.go hub.go structs.go communication.go game.go

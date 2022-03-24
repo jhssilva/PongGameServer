@@ -7,6 +7,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
 type Hub struct {
 	clients   map[*websocket.Conn]bool
 	broadcast chan ServerGameData
