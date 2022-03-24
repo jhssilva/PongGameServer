@@ -1,4 +1,4 @@
-module websockets.go
+module pong.go
 
 go 1.17
 

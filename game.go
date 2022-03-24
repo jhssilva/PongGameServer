@@ -186,7 +186,7 @@ func resetBoard() {
 	gameData.Board.Size.Width = 640
 	gameData.Board.Size.Height = 480
 	gameData.Board.Bar.Width = 10
-	gameData.Board.Bar.Height = 120
+	gameData.Board.Bar.Height = 100
 }
 
 func resetBall(num int) {
